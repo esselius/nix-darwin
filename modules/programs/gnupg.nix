@@ -10,6 +10,14 @@ in
 
 {
   options.programs.gnupg = {
+    package = mkOption {
+      type = types.package;
+      default = pkgs.gnupg;
+      description = ''
+        What package to use for gnupg
+      '';
+    };
+
     agent.enable = mkOption {
       type = types.bool;
       default = false;
@@ -31,7 +39,8 @@ in
   config = mkIf cfg.agent.enable {
     launchd.user.agents.gnupg-agent.serviceConfig = {
       ProgramArguments = [
-        "${pkgs.gnupg}/bin/gpg-connect-agent" "/bye"
+        "${cfg.package}/bin/gpg-connect-agent"
+        "/bye"
       ];
       RunAtLoad = cfg.agent.enableSSHSupport;
       KeepAlive.SuccessfulExit = false;
@@ -43,9 +52,11 @@ in
     '' + (optionalString cfg.agent.enableSSHSupport ''
       # SSH agent protocol doesn't support changing TTYs, so bind the agent
       # to every new TTY.
-      ${pkgs.gnupg}/bin/gpg-connect-agent --quiet updatestartuptty /bye > /dev/null
+      ${cfg.package}/bin/gpg-connect-agent --quiet updatestartuptty /bye > /dev/null
 
-      export SSH_AUTH_SOCK=$(${pkgs.gnupg}/bin/gpgconf --list-dirs agent-ssh-socket)
+      export SSH_AUTH_SOCK=$(${cfg.package}/bin/gpgconf --list-dirs agent-ssh-socket)
     '');
+
+    environment.systemPackages = [ cfg.package ];
   };
 }
